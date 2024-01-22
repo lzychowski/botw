@@ -55,4 +55,13 @@ private:
 
 	bool bWantsToClimb = false;
 
+	virtual void PhysCustom(float deltaTime, int32 Iterations) override;
+
+	void PhysClimbing(float deltaTime, int32 Iterations);
+
+	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
+
+	UPROPERTY(Category="Character Movement: Climbing", EditAnywhere, meta=(ClampMin="0.0", ClampMax="80.0"))
+	float ClimbingCollisionShrinkAmount = 30;
+
 };
