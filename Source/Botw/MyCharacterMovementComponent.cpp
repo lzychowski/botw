@@ -175,3 +175,124 @@ void UMyCharacterMovementComponent::OnMovementModeChanged(EMovementMode Previous
 
 	Super::OnMovementModeChanged(PreviousMovementMode, PreviousCustomMode);
 }
+
+void UMyCharacterMovementComponent::PhysClimbing(float deltaTime, int32 Iterations)
+{
+	if (deltaTime < MIN_TICK_TIME)
+	{
+		return;
+	}
+
+	ComputeSurfaceInfo();
+
+	if (ShouldStopClimbing())
+	{
+		StopClimbing(deltaTime, Iterations);
+		return;
+	}
+
+	ComputeClimbingVelocity(deltaTime);
+
+	const FVector OldLocation = UpdatedComponent->GetComponentLocation();
+
+	MoveAlongClimbingSurface(deltaTime);
+
+	if (!HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
+	{
+		Velocity = (UpdatedComponent->GetComponentLocation() - OldLocation) / deltaTime;
+	}
+
+	SnapToClimbingSurface(deltaTime);
+}
+
+void UMyCharacterMovementComponent::ComputeSurfaceInfo()
+{
+	CurrentClimbingNormal = FVector::ZeroVector;
+	CurrentClimbingPosition = FVector::ZeroVector;
+
+	if (CurrentWallHits.IsEmpty())
+	{
+		return;
+	}
+
+	for (const FHitResult& WallHit : CurrentWallHits)
+	{
+		CurrentClimbingPosition += WallHit.ImpactPoint;
+		CurrentClimbingNormal += WallHit.Normal;
+	}
+
+	CurrentClimbingPosition /= CurrentWallHits.Num();
+	CurrentClimbingNormal = CurrentClimbingNormal.GetSafeNormal();
+}
+
+// Update temporary code to return the new variable instead!
+FVector UMyCharacterMovementComponent::GetClimbSurfaceNormal() const
+{
+	return CurrentClimbingNormal;
+}
+
+bool UMyCharacterMovementComponent::ShouldStopClimbing() const
+{
+	const bool bIsOnCeiling = FVector::Parallel(CurrentClimbingNormal, FVector::UpVector);
+
+	return !bWantsToClimb || CurrentClimbingNormal.IsZero() || bIsOnCeiling;
+}
+
+void UMyCharacterMovementComponent::StopClimbing(float deltaTime, int32 Iterations)
+{
+	bWantsToClimb = false;
+	SetMovementMode(EMovementMode::MOVE_Falling);
+	StartNewPhysics(deltaTime, Iterations);
+}
+
+void UMyCharacterMovementComponent::ComputeClimbingVelocity(float deltaTime)
+{
+	RestorePreAdditiveRootMotionVelocity();
+
+	if (!HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
+	{
+		constexpr float Friction = 0.0f;
+		constexpr bool bFluid = false;
+		CalcVelocity(deltaTime, Friction, bFluid, BrakingDecelerationClimbing);
+	}
+
+	ApplyRootMotionToVelocity(deltaTime);
+}
+
+float UMyCharacterMovementComponent::GetMaxSpeed() const
+{
+	return IsClimbing() ? MaxClimbingSpeed : Super::GetMaxSpeed();
+}
+
+float UMyCharacterMovementComponent::GetMaxAcceleration() const
+{
+	return IsClimbing() ? MaxClimbingAcceleration : Super::GetMaxAcceleration();
+}
+
+void UMyCharacterMovementComponent::MoveAlongClimbingSurface(float deltaTime)
+{
+	const FVector Adjusted = Velocity * deltaTime;
+
+	FHitResult Hit(1.f);
+
+	SafeMoveUpdatedComponent(Adjusted, GetClimbingRotation(deltaTime), true, Hit);
+
+	if (Hit.Time < 1.f)
+	{
+		HandleImpact(Hit, deltaTime, Adjusted);
+		SlideAlongSurface(Adjusted, (1.f - Hit.Time), Hit.Normal, Hit, true);
+	}
+}
+
+void UMyCharacterMovementComponent::SnapToClimbingSurface(float deltaTime) const
+{
+	const FVector Forward = UpdatedComponent->GetForwardVector();
+	const FVector Location = UpdatedComponent->GetComponentLocation();
+	const FQuat Rotation = UpdatedComponent->GetComponentQuat();
+
+	const FVector ForwardDifference = (CurrentClimbingPosition - Location).ProjectOnTo(Forward);
+	const FVector Offset = -CurrentClimbingNormal * (ForwardDifference.Length() - DistanceFromSurface);
+
+	constexpr bool bSweep = true;
+	UpdatedComponent->MoveComponent(Offset * ClimbingSnapSpeed * deltaTime, Rotation, bSweep);
+}
