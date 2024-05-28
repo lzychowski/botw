@@ -38,6 +38,14 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void CancelClimbing();
 
+	UFUNCTION(BlueprintCallable)
+	void Attack();
+
+	void OnPunchingMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	UPROPERTY(BlueprintReadWrite, Category = "Character Movement: Punching")
+	bool bIsPunching;
+
 private:
 	UPROPERTY(Category="Character Movement: Climbing", EditAnywhere)
 	int CollisionCapsuleRadius = 50;
@@ -77,6 +85,9 @@ private:
 
 	UPROPERTY(Category="Character Movement: Climbing", EditDefaultsOnly)
 	UCurveFloat* ClimbDashCurve;
+
+	UPROPERTY(Category="Character Movement: Punching", EditDefaultsOnly)
+	UAnimMontage* Punching_UE_Montage;
 
 	UPROPERTY()
 	UAnimInstance* AnimInstance;

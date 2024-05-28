@@ -29,7 +29,7 @@ void UMyCharacterMovementComponent::TickComponent(float DeltaTime, ELevelTick Ti
 
 void UMyCharacterMovementComponent::SweepAndStoreWallHits()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("SWEEP"));
+	//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("SWEEP"));
 	bool printed = false;
 	
 	const FCollisionShape CollisionShape = FCollisionShape::MakeCapsule(CollisionCapsuleRadius, CollisionCapsuleHalfHeight);
@@ -49,7 +49,7 @@ void UMyCharacterMovementComponent::SweepAndStoreWallHits()
 
 		if (!printed) {
 			printed = true;
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("HIT"));
+			//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("HIT"));
 		}
 	}
 
@@ -470,6 +470,28 @@ void UMyCharacterMovementComponent::StoreClimbDashDirection()
 void UMyCharacterMovementComponent::CancelClimbing()
 {
 	bWantsToClimb = false;
+}
+
+void UMyCharacterMovementComponent::Attack()
+{
+    if (Punching_UE_Montage)
+    {
+        bIsPunching = true;
+        AnimInstance->Montage_Play(Punching_UE_Montage);
+
+        // Set up a notification or callback to reset the flag when the montage ends
+        FOnMontageEnded MontageEndedDelegate;
+        MontageEndedDelegate.BindUObject(this, &UMyCharacterMovementComponent::OnPunchingMontageEnded);
+        AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, Punching_UE_Montage);
+    }
+}
+
+void UMyCharacterMovementComponent::OnPunchingMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    if (Montage == Punching_UE_Montage)
+    {
+        bIsPunching = false;
+    }
 }
 
 FVector UMyCharacterMovementComponent::GetClimbSurfaceNormal() const

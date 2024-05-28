@@ -3,6 +3,7 @@
 #include "BotwCharacter.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
+#include "Animation/SkeletalMeshActor.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -11,6 +12,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "MyCharacterMovementComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -28,6 +30,8 @@ ABotwCharacter::ABotwCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
+
+	bIsPunching = false;
 
 	// Configure character movement
 	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
@@ -56,6 +60,14 @@ ABotwCharacter::ABotwCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 	MovementComponent = Cast<UMyCharacterMovementComponent>(GetCharacterMovement());
+
+	static ConstructorHelpers::FClassFinder<AActor> BlueprintFinder(TEXT("/Game/Characters/NPC/test_ai")); // Adjust the path
+
+    if (BlueprintFinder.Succeeded()) {
+        AI_BP = BlueprintFinder.Class;
+    } else {
+        UE_LOG(LogTemp, Error, TEXT("Could not find Blueprint class at /Game/Characters/NPC/test_ai"));
+    }
 }
 
 void ABotwCharacter::BeginPlay()
@@ -73,6 +85,82 @@ void ABotwCharacter::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
+
+	FistCollision = Cast<USphereComponent>(FindComponentByClass<USphereComponent>());
+
+	if (FistCollision){
+		FistCollision->OnComponentBeginOverlap.AddDynamic(this, &ABotwCharacter::OnBoxBeginOverlap);
+		FistCollision->OnComponentHit.AddDynamic(this, &ABotwCharacter::OnBoxHit);
+	}
+}
+
+void ABotwCharacter::OnBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (!bIsPunching) return; // Only proceed if the character is punching
+
+    if (bHasHandledOverlap) return;
+    bHasHandledOverlap = true;
+	
+	// Handle overlap logic here
+    UE_LOG(LogTemp, Warning, TEXT("Overlap with %s"), *OtherActor->GetName());
+
+	if (OtherActor && OtherActor->IsA(AI_BP)) { // Replace with your skeletal mesh class
+        auto SkeletalMeshActor = Cast<ASkeletalMeshActor>(OtherActor);
+		UE_LOG(LogTemp, Warning, TEXT("skeletal mesh actor"));
+        if (SkeletalMeshActor && SkeletalMeshActor->GetSkeletalMeshComponent()) {
+
+			USkeletalMeshComponent* SkeletalMeshComp = SkeletalMeshActor->GetSkeletalMeshComponent();
+
+			if (!SkeletalMeshComp->IsSimulatingPhysics()) {
+				//UE_LOG(LogTemp, Warning, TEXT("IsSimulatingPhysics: %s"), SkeletalMeshComp->IsSimulatingPhysics() ? TEXT("true") : TEXT("false"));
+				SkeletalMeshComp->SetSimulatePhysics(true);
+				//UE_LOG(LogTemp, Warning, TEXT("IsSimulatingPhysics %s"), SkeletalMeshComp->IsSimulatingPhysics() ? TEXT("true") : TEXT("false"));
+			}
+
+			FVector ImpactNormal = SweepResult.ImpactNormal;
+			FVector Normal = SweepResult.Normal;
+
+			// Increase angular damping to reduce spinning
+            SkeletalMeshComp->SetAngularDamping(5.0f); // Adjust value as needed
+            SkeletalMeshComp->SetLinearDamping(2.0f);  // Adjust value as needed
+
+ 			FVector ImpactImpulse = -ImpactNormal * 10000.0f; // Example force magnitude
+
+			//FVector socketNormal = SkeletalMeshComp->GetSocketLocation("hand_rSocket");
+			FRotator PlayerRotation = GetActorRotation();
+			// Convert the rotation to a direction vector
+			FVector ForwardVector = UKismetMathLibrary::GetForwardVector(PlayerRotation);
+
+			UE_LOG(LogTemp, Warning, TEXT("ImpactNormal %s"), *ImpactNormal.ToString());
+			UE_LOG(LogTemp, Warning, TEXT("ImpactImpulse %s"), *ImpactImpulse.ToString());
+			UE_LOG(LogTemp, Warning, TEXT("ForwardVector %s"), *ForwardVector.ToString());
+
+
+			// Apply the impulse to the skeletal mesh component at the center of mass
+			SkeletalMeshComp->AddImpulse(ForwardVector * 10000.0f, NAME_None, true);
+			
+            UE_LOG(LogTemp, Warning, TEXT("Triggered ragdoll on %s"), *OtherActor->GetName());
+        }
+	}
+
+	// Reset flag after a short delay or next frame
+    GetWorld()->GetTimerManager().SetTimerForNextTick([this]() {
+        bHasHandledOverlap = false;
+    });
+}
+
+void ABotwCharacter::OnBoxHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+    // Handle hit logic here
+    UE_LOG(LogTemp, Warning, TEXT("(((((((HIT))))))) %s"), *OtherActor->GetName());
+
+	// if (OtherActor && OtherActor->IsA(AI_BP)) {
+    //     auto SkeletalMeshActor = Cast<ASkeletalMeshActor>(OtherActor);
+    //     if (SkeletalMeshActor && SkeletalMeshActor->GetSkeletalMeshComponent()) {
+    //         //keletalMeshActor->GetSkeletalMeshComponent()->SetSimulatePhysics(true);
+    //         //E_LOG(LogTemp, Warning, TEXT("Ragdoll triggered by hit with %s"), *OtherActor->GetName());
+    //     }
+    // }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -100,6 +188,7 @@ void ABotwCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 	PlayerInputComponent->BindAction("Climb", IE_Pressed, this, &ABotwCharacter::Climb);
 	PlayerInputComponent->BindAction("Cancel Climb", IE_Pressed, this, &ABotwCharacter::CancelClimb);
+	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &ABotwCharacter::Attack);
 }
 
 void ABotwCharacter::Move(const FInputActionValue& Value)
@@ -147,47 +236,6 @@ void ABotwCharacter::Move(const FInputActionValue& Value)
 	}
 }
 
-// void ABotwCharacter::MoveForward(float Value)
-// {
-// 	if (Controller == nullptr || Value == 0.0f)
-// 	{
-// 		return;
-// 	}
-
-// 	FVector Direction;
-	
-// 	if (MovementComponent->IsClimbing())
-// 	{
-// 		Direction = FVector::CrossProduct(MovementComponent->GetClimbSurfaceNormal(), -GetActorRightVector());
-// 	}
-// 	else
-// 	{
-// 		Direction = GetControlOrientationMatrix().GetUnitAxis(EAxis::X);
-// 	}
-	
-// 	AddMovementInput(Direction, Value);
-// }
-
-// void ABotwCharacter::MoveRight(float Value)
-// {
-// 	if (Controller == nullptr || Value == 0.0f)
-// 	{
-// 		return;
-// 	}
-
-// 	FVector Direction;
-// 	if (MovementComponent->IsClimbing())
-// 	{
-// 		Direction = FVector::CrossProduct(MovementComponent->GetClimbSurfaceNormal(), GetActorUpVector());
-// 	}
-// 	else
-// 	{
-// 		Direction = GetControlOrientationMatrix().GetUnitAxis(EAxis::Y);
-// 	}
-	
-// 	AddMovementInput(Direction, Value);
-// }
-
 void ABotwCharacter::Look(const FInputActionValue& Value)
 {
 	// input is a Vector2D
@@ -211,4 +259,10 @@ void ABotwCharacter::CancelClimb()
 {
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("+++ CANCEL CLIMB +++"));
 	MovementComponent->CancelClimbing();
+}
+
+void ABotwCharacter::Attack()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("+++ ATTACK +++"));
+	MovementComponent->Attack();
 }
