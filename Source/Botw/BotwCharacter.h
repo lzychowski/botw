@@ -6,9 +6,12 @@
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
 #include "Components/SphereComponent.h"
-#include "MyCharacterMovementComponent.h"
+//#include "MyCharacterMovementComponent.h"
 #include "UObject/ConstructorHelpers.h" // For class finding
 #include "BotwCharacter.generated.h"
+
+// Forward declaration
+class UMyCharacterMovementComponent;
 
 class USpringArmComponent;
 class UCameraComponent;

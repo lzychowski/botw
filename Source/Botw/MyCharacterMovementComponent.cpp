@@ -1,5 +1,5 @@
 #include "MyCharacterMovementComponent.h"
-
+#include "BotwCharacter.h"
 #include "ECustomMovementMode.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
@@ -474,9 +474,10 @@ void UMyCharacterMovementComponent::CancelClimbing()
 
 void UMyCharacterMovementComponent::Attack()
 {
+	ABotwCharacter* Character = Cast<ABotwCharacter>(GetOwner());
     if (Punching_UE_Montage)
     {
-        bIsPunching = true;
+        Character->bIsPunching = true;
         AnimInstance->Montage_Play(Punching_UE_Montage);
 
         // Set up a notification or callback to reset the flag when the montage ends
@@ -488,9 +489,10 @@ void UMyCharacterMovementComponent::Attack()
 
 void UMyCharacterMovementComponent::OnPunchingMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	ABotwCharacter* Character = Cast<ABotwCharacter>(GetOwner());
     if (Montage == Punching_UE_Montage)
     {
-        bIsPunching = false;
+        Character->bIsPunching = false;
     }
 }
 

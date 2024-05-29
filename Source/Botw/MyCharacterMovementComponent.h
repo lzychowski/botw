@@ -6,6 +6,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "MyCharacterMovementComponent.generated.h"
 
+// Forward declaration
+class ABotwCharacter;
+
 /**
  * 
  */

@@ -11,8 +11,9 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
-#include "MyCharacterMovementComponent.h"
+#include "MyCharacterMovementComponent.h" // Include the header here
 #include "Kismet/KismetMathLibrary.h"
+
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
