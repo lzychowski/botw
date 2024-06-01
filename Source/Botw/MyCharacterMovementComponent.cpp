@@ -477,13 +477,13 @@ void UMyCharacterMovementComponent::Attack()
 	ABotwCharacter* Character = Cast<ABotwCharacter>(GetOwner());
     if (Punching_UE_Montage)
     {
-        Character->bIsPunching = true;
+        //Character->bIsPunching = true;
         AnimInstance->Montage_Play(Punching_UE_Montage);
 
         // Set up a notification or callback to reset the flag when the montage ends
-        FOnMontageEnded MontageEndedDelegate;
-        MontageEndedDelegate.BindUObject(this, &UMyCharacterMovementComponent::OnPunchingMontageEnded);
-        AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, Punching_UE_Montage);
+        //FOnMontageEnded MontageEndedDelegate;
+        //MontageEndedDelegate.BindUObject(this, &UMyCharacterMovementComponent::OnPunchingMontageEnded);
+        //AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, Punching_UE_Montage);
     }
 }
 

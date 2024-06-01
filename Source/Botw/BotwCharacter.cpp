@@ -97,6 +97,7 @@ void ABotwCharacter::BeginPlay()
 
 void ABotwCharacter::OnBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	UE_LOG(LogTemp, Warning, TEXT("bIsPunching %s"), ( bIsPunching ? TEXT("true") : TEXT("false") ));
 	if (!bIsPunching) return; // Only proceed if the character is punching
 
     if (bHasHandledOverlap) return;
