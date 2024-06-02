@@ -475,15 +475,18 @@ void UMyCharacterMovementComponent::CancelClimbing()
 void UMyCharacterMovementComponent::Attack()
 {
 	ABotwCharacter* Character = Cast<ABotwCharacter>(GetOwner());
-    if (Punching_UE_Montage)
+    if (Character && Punching_UE_Montage)
     {
+        // Disable character movement
+        Character->GetCharacterMovement()->DisableMovement();
+
         //Character->bIsPunching = true;
         AnimInstance->Montage_Play(Punching_UE_Montage);
 
         // Set up a notification or callback to reset the flag when the montage ends
-        //FOnMontageEnded MontageEndedDelegate;
-        //MontageEndedDelegate.BindUObject(this, &UMyCharacterMovementComponent::OnPunchingMontageEnded);
-        //AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, Punching_UE_Montage);
+        FOnMontageEnded MontageEndedDelegate;
+        MontageEndedDelegate.BindUObject(this, &UMyCharacterMovementComponent::OnPunchingMontageEnded);
+        AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, Punching_UE_Montage);
     }
 }
 
@@ -492,7 +495,8 @@ void UMyCharacterMovementComponent::OnPunchingMontageEnded(UAnimMontage* Montage
 	ABotwCharacter* Character = Cast<ABotwCharacter>(GetOwner());
     if (Montage == Punching_UE_Montage)
     {
-        Character->bIsPunching = false;
+        // Re-enable character movement
+        Character->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     }
 }
 

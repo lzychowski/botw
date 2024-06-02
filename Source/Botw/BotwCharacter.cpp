@@ -26,6 +26,9 @@ ABotwCharacter::ABotwCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
 	UE_LOG(LogTemplateCharacter, Error, TEXT("BEGIN PLAY"), *GetNameSafe(this));
+
+	// Set this character to call Tick() every frame
+    PrimaryActorTick.bCanEverTick = true;
 		
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
@@ -71,6 +74,87 @@ ABotwCharacter::ABotwCharacter(const FObjectInitializer& ObjectInitializer) : Su
     }
 }
 
+//----------------------------------------------------------------------------------------------------------
+
+void ABotwCharacter::SetPunching(bool bPunching)
+{
+    bIsPunching = bPunching;
+
+    if (bIsPunching)
+    {
+        // Call the overlap check immediately when punch starts
+        CheckOverlapDuringPunch();
+    }
+}
+
+bool ABotwCharacter::IsPunching() const
+{
+    return bIsPunching;
+}
+
+void ABotwCharacter::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
+    if (bIsPunching)
+    {
+        CheckOverlapDuringPunch();
+    }
+}
+
+void ABotwCharacter::CheckOverlapDuringPunch()
+{
+    TArray<AActor*> OverlappingActors;
+    GetOverlappingActors(OverlappingActors);
+
+    for (AActor* Actor : OverlappingActors)
+    {
+        //if (Actor && Actor->IsA(AI_BP)) // Replace with your skeletal mesh class
+		if (Actor) // Replace with your skeletal mesh class
+        {
+			// Handle overlap logic here
+			UE_LOG(LogTemp, Warning, TEXT("Overlap with %s"), *Actor->GetName());
+
+			UE_LOG(LogTemp, Warning, TEXT("getting skeletal mesh actor"));
+            auto SkeletalMeshActor = Cast<ASkeletalMeshActor>(Actor);
+			UE_LOG(LogTemp, Warning, TEXT("got skeletal mesh actor"));
+
+            if (SkeletalMeshActor && SkeletalMeshActor->GetSkeletalMeshComponent())
+            {
+				UE_LOG(LogTemp, Warning, TEXT("skeletal mesh actor has a skeletal mesh component"));
+                USkeletalMeshComponent* SkeletalMeshComp = SkeletalMeshActor->GetSkeletalMeshComponent();
+
+                if (!SkeletalMeshComp->IsSimulatingPhysics())
+                {
+                    SkeletalMeshComp->SetSimulatePhysics(true);
+                }
+
+                FVector ImpactNormal = GetActorForwardVector();
+                FVector ImpactImpulse = ImpactNormal * 10000.0f; // Example force magnitude
+
+                SkeletalMeshComp->SetAngularDamping(5.0f); // Adjust value as needed
+                SkeletalMeshComp->SetLinearDamping(2.0f);  // Adjust value as needed
+                
+				//FVector socketNormal = SkeletalMeshComp->GetSocketLocation("hand_rSocket");
+				FRotator PlayerRotation = GetActorRotation();
+				// Convert the rotation to a direction vector
+				FVector ForwardVector = UKismetMathLibrary::GetForwardVector(PlayerRotation);
+
+				UE_LOG(LogTemp, Warning, TEXT("ImpactNormal %s"), *ImpactNormal.ToString());
+				UE_LOG(LogTemp, Warning, TEXT("ImpactImpulse %s"), *ImpactImpulse.ToString());
+				UE_LOG(LogTemp, Warning, TEXT("ForwardVector %s"), *ForwardVector.ToString());
+
+				// Apply the impulse to the skeletal mesh component at the center of mass
+				SkeletalMeshComp->AddImpulse(ForwardVector * 10000.0f, NAME_None, true);
+
+                UE_LOG(LogTemp, Warning, TEXT("Triggered ragdoll on %s"), *Actor->GetName());
+            }
+        }
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------
+
 void ABotwCharacter::BeginPlay()
 {
 	// Call the base class  
@@ -89,10 +173,10 @@ void ABotwCharacter::BeginPlay()
 
 	FistCollision = Cast<USphereComponent>(FindComponentByClass<USphereComponent>());
 
-	if (FistCollision){
-		FistCollision->OnComponentBeginOverlap.AddDynamic(this, &ABotwCharacter::OnBoxBeginOverlap);
-		FistCollision->OnComponentHit.AddDynamic(this, &ABotwCharacter::OnBoxHit);
-	}
+	// if (FistCollision){
+	// 	FistCollision->OnComponentBeginOverlap.AddDynamic(this, &ABotwCharacter::OnBoxBeginOverlap);
+	// 	FistCollision->OnComponentHit.AddDynamic(this, &ABotwCharacter::OnBoxHit);
+	// }
 }
 
 void ABotwCharacter::OnBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)

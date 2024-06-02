@@ -70,6 +70,17 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "Character")
     bool bIsPunching;
 
+    UFUNCTION(BlueprintCallable, Category = "Character")
+    void SetPunching(bool bPunching);
+
+    UFUNCTION(BlueprintCallable, Category = "Character")
+    bool IsPunching() const;
+
+    virtual void Tick(float DeltaTime) override;
+
+private:
+    void CheckOverlapDuringPunch();
+
 protected:
 
 	/** Called for movement input */

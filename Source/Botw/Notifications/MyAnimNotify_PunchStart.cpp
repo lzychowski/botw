@@ -8,7 +8,8 @@ void UMyAnimNotify_PunchStart::Notify(USkeletalMeshComponent* MeshComp, UAnimSeq
         ABotwCharacter* Character = Cast<ABotwCharacter>(MeshComp->GetOwner());
         if (Character)
         {
-            Character->bIsPunching = true;
+            //Character->bIsPunching = true;
+            Character->SetPunching(true);
         }
     }
 }
