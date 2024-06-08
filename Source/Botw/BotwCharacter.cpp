@@ -107,87 +107,52 @@ void ABotwCharacter::CheckOverlapDuringPunch()
     TArray<AActor*> OverlappingActors;
     GetOverlappingActors(OverlappingActors);
 
+    auto HandleSkeletalMeshComponent = [&](USkeletalMeshComponent* SkeletalMeshComp, AActor* Actor)
+    {
+        if (SkeletalMeshComp)
+        {
+            if (!SkeletalMeshComp->IsSimulatingPhysics())
+            {
+                SkeletalMeshComp->SetSimulatePhysics(true);
+            }
+
+            FVector ImpactNormal = GetActorForwardVector();
+            FVector ImpactImpulse = ImpactNormal * 10000.0f; // Example force magnitude
+
+            SkeletalMeshComp->SetAngularDamping(5.0f); // Adjust value as needed
+            SkeletalMeshComp->SetLinearDamping(2.0f);  // Adjust value as needed
+
+            FRotator PlayerRotation = GetActorRotation();
+            FVector ForwardVector = UKismetMathLibrary::GetForwardVector(PlayerRotation);
+
+            UE_LOG(LogTemp, Warning, TEXT("ImpactNormal %s"), *ImpactNormal.ToString());
+            UE_LOG(LogTemp, Warning, TEXT("ImpactImpulse %s"), *ImpactImpulse.ToString());
+            UE_LOG(LogTemp, Warning, TEXT("ForwardVector %s"), *ForwardVector.ToString());
+
+            SkeletalMeshComp->AddImpulse(ForwardVector * 10000.0f, NAME_None, true);
+
+            UE_LOG(LogTemp, Warning, TEXT("Triggered ragdoll on %s"), *Actor->GetName());
+        }
+    };
+
     for (AActor* Actor : OverlappingActors)
     {
-        //if (Actor && Actor->IsA(AI_BP)) // Replace with your skeletal mesh class
-		if (Actor) // Replace with your skeletal mesh class
+        if (Actor)
         {
-			UE_LOG(LogTemp, Warning, TEXT("Overlap with %s"), *Actor->GetName());
+            UE_LOG(LogTemp, Warning, TEXT("Overlap with %s"), *Actor->GetName());
 
-			ACharacter* Character = Cast<ACharacter>(Actor);
-			if (Character)
-			{
-				USkeletalMeshComponent* SkeletalMeshComp = Character->GetMesh();
-				if (SkeletalMeshComp)
-				{
-					// Now you can work with the SkeletalMeshComponent
-					 if (!SkeletalMeshComp->IsSimulatingPhysics())
-					{
-						SkeletalMeshComp->SetSimulatePhysics(true);
-					}
-
-					FVector ImpactNormal = GetActorForwardVector();
-					FVector ImpactImpulse = ImpactNormal * 10000.0f; // Example force magnitude
-
-					SkeletalMeshComp->SetAngularDamping(5.0f); // Adjust value as needed
-					SkeletalMeshComp->SetLinearDamping(2.0f);  // Adjust value as needed
-					
-					//FVector socketNormal = SkeletalMeshComp->GetSocketLocation("hand_rSocket");
-					FRotator PlayerRotation = GetActorRotation();
-					// Convert the rotation to a direction vector
-					FVector ForwardVector = UKismetMathLibrary::GetForwardVector(PlayerRotation);
-
-					UE_LOG(LogTemp, Warning, TEXT("ImpactNormal %s"), *ImpactNormal.ToString());
-					UE_LOG(LogTemp, Warning, TEXT("ImpactImpulse %s"), *ImpactImpulse.ToString());
-					UE_LOG(LogTemp, Warning, TEXT("ForwardVector %s"), *ForwardVector.ToString());
-
-					// Apply the impulse to the skeletal mesh component at the center of mass
-					SkeletalMeshComp->AddImpulse(ForwardVector * 10000.0f, NAME_None, true);
-
-					UE_LOG(LogTemp, Warning, TEXT("Triggered ragdoll on %s"), *Actor->GetName());
-				}
-			}
-
-
-
-
-
-			// Handle overlap logic here
-
-
-			UE_LOG(LogTemp, Warning, TEXT("getting skeletal mesh actor"));
-            auto SkeletalMeshActor = Cast<ASkeletalMeshActor>(Actor);
-			UE_LOG(LogTemp, Warning, TEXT("got skeletal mesh actor"));
-
-            if (SkeletalMeshActor && SkeletalMeshActor->GetSkeletalMeshComponent())
+            ACharacter* Character = Cast<ACharacter>(Actor);
+            if (Character)
             {
-				UE_LOG(LogTemp, Warning, TEXT("skeletal mesh actor has a skeletal mesh component"));
+                USkeletalMeshComponent* SkeletalMeshComp = Character->GetMesh();
+                HandleSkeletalMeshComponent(SkeletalMeshComp, Actor);
+            }
+
+            auto SkeletalMeshActor = Cast<ASkeletalMeshActor>(Actor);
+            if (SkeletalMeshActor)
+            {
                 USkeletalMeshComponent* SkeletalMeshComp = SkeletalMeshActor->GetSkeletalMeshComponent();
-
-                if (!SkeletalMeshComp->IsSimulatingPhysics())
-                {
-                    SkeletalMeshComp->SetSimulatePhysics(true);
-                }
-
-                FVector ImpactNormal = GetActorForwardVector();
-                FVector ImpactImpulse = ImpactNormal * 10000.0f; // Example force magnitude
-
-                SkeletalMeshComp->SetAngularDamping(5.0f); // Adjust value as needed
-                SkeletalMeshComp->SetLinearDamping(2.0f);  // Adjust value as needed
-                
-				//FVector socketNormal = SkeletalMeshComp->GetSocketLocation("hand_rSocket");
-				FRotator PlayerRotation = GetActorRotation();
-				// Convert the rotation to a direction vector
-				FVector ForwardVector = UKismetMathLibrary::GetForwardVector(PlayerRotation);
-
-				UE_LOG(LogTemp, Warning, TEXT("ImpactNormal %s"), *ImpactNormal.ToString());
-				UE_LOG(LogTemp, Warning, TEXT("ImpactImpulse %s"), *ImpactImpulse.ToString());
-				UE_LOG(LogTemp, Warning, TEXT("ForwardVector %s"), *ForwardVector.ToString());
-
-				// Apply the impulse to the skeletal mesh component at the center of mass
-				SkeletalMeshComp->AddImpulse(ForwardVector * 10000.0f, NAME_None, true);
-
-                UE_LOG(LogTemp, Warning, TEXT("Triggered ragdoll on %s"), *Actor->GetName());
+                HandleSkeletalMeshComponent(SkeletalMeshComp, Actor);
             }
         }
     }
@@ -212,81 +177,12 @@ void ABotwCharacter::BeginPlay()
 	}
 
 	FistCollision = Cast<USphereComponent>(FindComponentByClass<USphereComponent>());
-
-	// if (FistCollision){
-	// 	FistCollision->OnComponentBeginOverlap.AddDynamic(this, &ABotwCharacter::OnBoxBeginOverlap);
-	// 	FistCollision->OnComponentHit.AddDynamic(this, &ABotwCharacter::OnBoxHit);
-	// }
-}
-
-void ABotwCharacter::OnBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
-{
-	UE_LOG(LogTemp, Warning, TEXT("bIsPunching %s"), ( bIsPunching ? TEXT("true") : TEXT("false") ));
-	if (!bIsPunching) return; // Only proceed if the character is punching
-
-    if (bHasHandledOverlap) return;
-    bHasHandledOverlap = true;
-	
-	// Handle overlap logic here
-    UE_LOG(LogTemp, Warning, TEXT("Overlap with %s"), *OtherActor->GetName());
-
-	if (OtherActor && OtherActor->IsA(AI_BP)) { // Replace with your skeletal mesh class
-        auto SkeletalMeshActor = Cast<ASkeletalMeshActor>(OtherActor);
-		UE_LOG(LogTemp, Warning, TEXT("skeletal mesh actor"));
-        if (SkeletalMeshActor && SkeletalMeshActor->GetSkeletalMeshComponent()) {
-
-			USkeletalMeshComponent* SkeletalMeshComp = SkeletalMeshActor->GetSkeletalMeshComponent();
-
-			if (!SkeletalMeshComp->IsSimulatingPhysics()) {
-				//UE_LOG(LogTemp, Warning, TEXT("IsSimulatingPhysics: %s"), SkeletalMeshComp->IsSimulatingPhysics() ? TEXT("true") : TEXT("false"));
-				SkeletalMeshComp->SetSimulatePhysics(true);
-				//UE_LOG(LogTemp, Warning, TEXT("IsSimulatingPhysics %s"), SkeletalMeshComp->IsSimulatingPhysics() ? TEXT("true") : TEXT("false"));
-			}
-
-			FVector ImpactNormal = SweepResult.ImpactNormal;
-			FVector Normal = SweepResult.Normal;
-
-			// Increase angular damping to reduce spinning
-            SkeletalMeshComp->SetAngularDamping(5.0f); // Adjust value as needed
-            SkeletalMeshComp->SetLinearDamping(2.0f);  // Adjust value as needed
-
- 			FVector ImpactImpulse = -ImpactNormal * 10000.0f; // Example force magnitude
-
-			//FVector socketNormal = SkeletalMeshComp->GetSocketLocation("hand_rSocket");
-			FRotator PlayerRotation = GetActorRotation();
-			// Convert the rotation to a direction vector
-			FVector ForwardVector = UKismetMathLibrary::GetForwardVector(PlayerRotation);
-
-			UE_LOG(LogTemp, Warning, TEXT("ImpactNormal %s"), *ImpactNormal.ToString());
-			UE_LOG(LogTemp, Warning, TEXT("ImpactImpulse %s"), *ImpactImpulse.ToString());
-			UE_LOG(LogTemp, Warning, TEXT("ForwardVector %s"), *ForwardVector.ToString());
-
-
-			// Apply the impulse to the skeletal mesh component at the center of mass
-			SkeletalMeshComp->AddImpulse(ForwardVector * 10000.0f, NAME_None, true);
-			
-            UE_LOG(LogTemp, Warning, TEXT("Triggered ragdoll on %s"), *OtherActor->GetName());
-        }
-	}
-
-	// Reset flag after a short delay or next frame
-    GetWorld()->GetTimerManager().SetTimerForNextTick([this]() {
-        bHasHandledOverlap = false;
-    });
 }
 
 void ABotwCharacter::OnBoxHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
     // Handle hit logic here
     UE_LOG(LogTemp, Warning, TEXT("(((((((HIT))))))) %s"), *OtherActor->GetName());
-
-	// if (OtherActor && OtherActor->IsA(AI_BP)) {
-    //     auto SkeletalMeshActor = Cast<ASkeletalMeshActor>(OtherActor);
-    //     if (SkeletalMeshActor && SkeletalMeshActor->GetSkeletalMeshComponent()) {
-    //         //keletalMeshActor->GetSkeletalMeshComponent()->SetSimulatePhysics(true);
-    //         //E_LOG(LogTemp, Warning, TEXT("Ragdoll triggered by hit with %s"), *OtherActor->GetName());
-    //     }
-    // }
 }
 
 //////////////////////////////////////////////////////////////////////////
