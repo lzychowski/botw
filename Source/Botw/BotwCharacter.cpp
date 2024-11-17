@@ -5,7 +5,6 @@
 #include "Camera/CameraComponent.h"
 #include "Animation/SkeletalMeshActor.h"
 #include "Components/CapsuleComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/Controller.h"
 #include "EnhancedInputComponent.h"
@@ -64,8 +63,20 @@ ABotwCharacter::ABotwCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 	MovementComponent = Cast<UMyCharacterMovementComponent>(GetCharacterMovement());
+	UE_LOG(LogTemplateCharacter, Log, TEXT("Constructor: ABotwCharacter created with MovementComponent %s"), *GetNameSafe(MovementComponent));
 
 	static ConstructorHelpers::FClassFinder<AActor> BlueprintFinder(TEXT("/Game/Characters/NPC/test_ai")); // Adjust the path
+
+	if (GetCharacterMovement()) {
+		UE_LOG(LogTemp, Error, TEXT("GetCharacterMovement yay"));
+
+ 		ACharacter* OwnerCharacter = Cast<ACharacter>(MovementComponent->GetOwner());
+
+		if (OwnerCharacter) {
+			UE_LOG(LogTemp, Error, TEXT("GetCharacterMovement()->GetCharacterOwner() yay"));
+			AnimInstance = OwnerCharacter->GetMesh()->GetAnimInstance();
+		}
+	}
 
     if (BlueprintFinder.Succeeded()) {
         AI_BP = BlueprintFinder.Class;
@@ -100,6 +111,16 @@ void ABotwCharacter::Tick(float DeltaTime)
     {
         CheckOverlapDuringPunch();
     }
+}
+
+void ABotwCharacter::DisableLeftClick()
+{
+    bDisableLeftClick = true;
+}
+
+void ABotwCharacter::EnableLeftClick()
+{
+    bDisableLeftClick = false;
 }
 
 void ABotwCharacter::CheckOverlapDuringPunch()
@@ -177,6 +198,16 @@ void ABotwCharacter::BeginPlay()
 	}
 
 	FistCollision = Cast<USphereComponent>(FindComponentByClass<USphereComponent>());
+
+	 // Initialize the AnimInstance
+    if (GetMesh())
+    {
+        AnimInstance = GetMesh()->GetAnimInstance();
+        if (!AnimInstance)
+        {
+            UE_LOG(LogTemplateCharacter, Error, TEXT("AnimInstance is null in BeginPlay for %s"), *GetNameSafe(this));
+        }
+    }
 }
 
 void ABotwCharacter::OnBoxHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
@@ -215,6 +246,9 @@ void ABotwCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 void ABotwCharacter::Move(const FInputActionValue& Value)
 {
+	ABotwCharacter* Character = Cast<ABotwCharacter>(MovementComponent->GetOwner());
+
+	if (Character->IsPunching()) return;
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
@@ -286,5 +320,57 @@ void ABotwCharacter::CancelClimb()
 void ABotwCharacter::Attack()
 {
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("+++ ATTACK +++"));
-	MovementComponent->Attack();
+
+	ABotwCharacter* Character = Cast<ABotwCharacter>(MovementComponent->GetOwner());
+
+	UE_LOG(LogTemp, Warning, TEXT("BEFORE IF: bIsPunching %s"), Character->IsPunching() ? TEXT("true") : TEXT("false"));
+
+    if (Character && Punching_UE_Montage && !Character->IsPunching())
+    {
+		UE_LOG(LogTemp, Warning, TEXT("AFTER IF: bIsPunching %s"), Character->IsPunching() ? TEXT("true") : TEXT("false"));
+
+		if (!AnimInstance)
+        {
+            AnimInstance = GetMesh()->GetAnimInstance();
+            if (!AnimInstance)
+            {
+                UE_LOG(LogTemplateCharacter, Error, TEXT("AnimInstance is null in Attack for %s"), *GetNameSafe(this));
+                return;
+            }
+        }
+
+        AnimInstance->Montage_Play(Punching_UE_Montage);
+
+		UE_LOG(LogTemp, Warning, TEXT("ice cream and beans"));
+
+        // Set up a notification or callback to reset the flag when the montage ends
+        FOnMontageEnded MontageEndedDelegate;
+        MontageEndedDelegate.BindUObject(this, &ABotwCharacter::OnPunchingMontageEnded);
+        AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, Punching_UE_Montage);
+    }
+}
+
+void ABotwCharacter::OnPunchingMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[OnPunchingMontageEnded]"));
+    if (Montage && Montage == Punching_UE_Montage && MovementComponent)
+    {
+
+    }
+    else
+    {
+        if (!Montage)
+        {
+            UE_LOG(LogTemp, Error, TEXT("Montage is null"));
+        }
+        else if (Montage != Punching_UE_Montage)
+        {
+            UE_LOG(LogTemp, Error, TEXT("Montage does not match Punching_UE_Montage"));
+        }
+
+        if (!MovementComponent)
+        {
+            UE_LOG(LogTemp, Error, TEXT("MovementComponent is null"));
+        }
+    }
 }

@@ -5,10 +5,10 @@ void UMyAnimNotify_PunchStart::Notify(USkeletalMeshComponent* MeshComp, UAnimSeq
 {
     if (MeshComp && MeshComp->GetOwner())
     {
+        UE_LOG(LogTemp, Error, TEXT("passed Notify first if"));
         ABotwCharacter* Character = Cast<ABotwCharacter>(MeshComp->GetOwner());
         if (Character)
         {
-            //Character->bIsPunching = true;
             Character->SetPunching(true);
         }
     }

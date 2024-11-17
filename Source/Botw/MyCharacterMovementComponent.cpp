@@ -4,7 +4,6 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
 
-
 UMyCharacterMovementComponent::UMyCharacterMovementComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
@@ -470,37 +469,6 @@ void UMyCharacterMovementComponent::StoreClimbDashDirection()
 void UMyCharacterMovementComponent::CancelClimbing()
 {
 	bWantsToClimb = false;
-}
-
-void UMyCharacterMovementComponent::Attack()
-{
-	ABotwCharacter* Character = Cast<ABotwCharacter>(GetOwner());
-
-	UE_LOG(LogTemp, Warning, TEXT("BEFORE IF: bIsPunching %s"), Character->IsPunching() ? TEXT("true") : TEXT("false"));
-
-    if (Character && Punching_UE_Montage && !Character->IsPunching())
-    {
-		UE_LOG(LogTemp, Warning, TEXT("AFTER IF: bIsPunching %s"), Character->IsPunching() ? TEXT("true") : TEXT("false"));
-        // Disable character movement
-        //Character->GetCharacterMovement()->DisableMovement();
-
-        AnimInstance->Montage_Play(Punching_UE_Montage);
-
-        // Set up a notification or callback to reset the flag when the montage ends
-        FOnMontageEnded MontageEndedDelegate;
-        MontageEndedDelegate.BindUObject(this, &UMyCharacterMovementComponent::OnPunchingMontageEnded);
-        AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, Punching_UE_Montage);
-    }
-}
-
-void UMyCharacterMovementComponent::OnPunchingMontageEnded(UAnimMontage* Montage, bool bInterrupted)
-{
-	ABotwCharacter* Character = Cast<ABotwCharacter>(GetOwner());
-    if (Montage == Punching_UE_Montage)
-    {
-        // Re-enable character movement
-        //Character->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-    }
 }
 
 FVector UMyCharacterMovementComponent::GetClimbSurfaceNormal() const

@@ -8,6 +8,7 @@
 #include "Components/SphereComponent.h"
 //#include "MyCharacterMovementComponent.h"
 #include "UObject/ConstructorHelpers.h" // For class finding
+#include "GameFramework/CharacterMovementComponent.h"
 #include "BotwCharacter.generated.h"
 
 // Forward declaration
@@ -75,8 +76,22 @@ public:
 
     virtual void Tick(float DeltaTime) override;
 
+	void DisableLeftClick();
+    void EnableLeftClick();
+
+	UPROPERTY(Category="Character Movement: Punching", EditDefaultsOnly)
+	UAnimMontage* Punching_UE_Montage;
+
 private:
     void CheckOverlapDuringPunch();
+
+	bool bDisableLeftClick;
+
+	UPROPERTY(Category="Character Movement: Punching", EditDefaultsOnly)
+	UAnimMontage* punch;
+
+	UPROPERTY()
+	UAnimInstance* AnimInstance;
 
 protected:
 
@@ -108,6 +123,8 @@ protected:
 	void CancelClimb();
 
 	void Attack();
+
+	void OnPunchingMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 public:
 	/** Returns CameraBoom subobject **/
