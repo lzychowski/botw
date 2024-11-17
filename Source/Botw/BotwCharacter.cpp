@@ -24,8 +24,6 @@ ABotwCharacter::ABotwCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
-	UE_LOG(LogTemplateCharacter, Error, TEXT("BEGIN PLAY"), *GetNameSafe(this));
-
 	// Set this character to call Tick() every frame
     PrimaryActorTick.bCanEverTick = true;
 		
@@ -68,12 +66,10 @@ ABotwCharacter::ABotwCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	static ConstructorHelpers::FClassFinder<AActor> BlueprintFinder(TEXT("/Game/Characters/NPC/test_ai")); // Adjust the path
 
 	if (GetCharacterMovement()) {
-		UE_LOG(LogTemp, Error, TEXT("GetCharacterMovement yay"));
 
  		ACharacter* OwnerCharacter = Cast<ACharacter>(MovementComponent->GetOwner());
 
 		if (OwnerCharacter) {
-			UE_LOG(LogTemp, Error, TEXT("GetCharacterMovement()->GetCharacterOwner() yay"));
 			AnimInstance = OwnerCharacter->GetMesh()->GetAnimInstance();
 		}
 	}
@@ -81,7 +77,7 @@ ABotwCharacter::ABotwCharacter(const FObjectInitializer& ObjectInitializer) : Su
     if (BlueprintFinder.Succeeded()) {
         AI_BP = BlueprintFinder.Class;
     } else {
-        UE_LOG(LogTemp, Error, TEXT("Could not find Blueprint class at /Game/Characters/NPC/test_ai"));
+
     }
 }
 
@@ -100,6 +96,7 @@ void ABotwCharacter::SetPunching(bool bPunching)
 
 bool ABotwCharacter::IsPunching() const
 {
+	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("isPunching"));
     return bIsPunching;
 }
 
@@ -361,16 +358,16 @@ void ABotwCharacter::OnPunchingMontageEnded(UAnimMontage* Montage, bool bInterru
     {
         if (!Montage)
         {
-            UE_LOG(LogTemp, Error, TEXT("Montage is null"));
+
         }
         else if (Montage != Punching_UE_Montage)
         {
-            UE_LOG(LogTemp, Error, TEXT("Montage does not match Punching_UE_Montage"));
+
         }
 
         if (!MovementComponent)
         {
-            UE_LOG(LogTemp, Error, TEXT("MovementComponent is null"));
+
         }
     }
 }
