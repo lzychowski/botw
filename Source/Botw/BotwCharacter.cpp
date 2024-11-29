@@ -184,6 +184,19 @@ void ABotwCharacter::BeginPlay()
 
     GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("BEGIN PLAY"));
 
+    // Example: Load your SoundWave asset
+    USoundWave* BackgroundSound = LoadObject<USoundWave>(nullptr, TEXT("/Game/Audio/Diablo_Dark_Ambient_Music_for_Deep_Relaxation_and_Meditation.Diablo_Dark_Ambient_Music_for_Deep_Relaxation_and_Meditation")
+);
+    if (BackgroundSound)
+    {
+        // Play the sound in 2D
+        UGameplayStatics::PlaySound2D(this, BackgroundSound);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Failed to load sound: /Game/Audio/Diablo_Dark_Ambient_Music_for_Deep_Relaxation_and_Meditation.Diablo_Dark_Ambient_Music_for_Deep_Relaxation_and_Meditation"));
+    }
+
     // Add Input Mapping Context
     if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
     {
@@ -241,6 +254,9 @@ void ABotwCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ABotwCharacter::Look);
+
+        // Bind the zoom action
+        EnhancedInputComponent->BindAction(ZoomAction, ETriggerEvent::Triggered, this, &ABotwCharacter::ZoomCamera);
 	}
 	else
 	{
@@ -331,6 +347,19 @@ void ABotwCharacter::Look(const FInputActionValue& Value)
             ControllerRotation.Pitch = FMath::Clamp(ControllerRotation.Pitch - LookAxisVector.Y, -80.0f, 80.0f); // Clamp pitch
             Controller->SetControlRotation(ControllerRotation);
         }
+    }
+}
+
+// ZOOM
+
+void ABotwCharacter::ZoomCamera(const FInputActionValue& Value)
+{
+    if (CameraBoom)
+    {
+        float AxisValue = Value.Get<float>(); // Get the axis value from the mouse wheel
+
+        float NewTargetArmLength = CameraBoom->TargetArmLength - (AxisValue * ZoomSpeed * GetWorld()->GetDeltaSeconds());
+        CameraBoom->TargetArmLength = FMath::Clamp(NewTargetArmLength, MinZoomDistance, MaxZoomDistance);
     }
 }
 

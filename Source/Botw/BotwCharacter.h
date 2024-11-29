@@ -9,6 +9,8 @@
 //#include "MyCharacterMovementComponent.h"
 #include "UObject/ConstructorHelpers.h" // For class finding
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Sound/SoundWave.h"
+#include "Kismet/GameplayStatics.h"
 #include "BotwCharacter.generated.h"
 
 // Forward declaration
@@ -103,6 +105,23 @@ protected:
     void OnLeftMouseReleased();
     void OnRightMousePressed();
     void OnRightMouseReleased();
+
+	// InputAction for zooming
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+    UInputAction* ZoomAction;
+
+	// Method to handle zooming
+    void ZoomCamera(const FInputActionValue& Value);
+
+	// Zoom limits
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+    float MinZoomDistance = 150.0f; // Minimum camera distance
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+    float MaxZoomDistance = 800.0f; // Maximum camera distance
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float ZoomSpeed = 300.0f; // Adjust this value to control zoom speed
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
