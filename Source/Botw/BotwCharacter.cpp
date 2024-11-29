@@ -284,39 +284,33 @@ void ABotwCharacter::Move(const FInputActionValue& Value)
 
 	if (Controller != nullptr)
 	{
-		// find out which way is forward
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
+		// Determine movement direction
+		FRotator YawRotation;
 
-		// get forward vector
-		//FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-		FVector ForwardDirection;
+		if (bIsLeftMouseButtonDown)
+		{
+			// Use the character's facing direction when left mouse button is pressed
+			YawRotation = FRotator(0, GetActorRotation().Yaw, 0);
+		}
+		else
+		{
+			// Use the controller's rotation otherwise
+ 			const FRotator Rotation = Controller->GetControlRotation();
+			YawRotation = FRotator(0, Rotation.Yaw, 0);
+		}
 
+		// Get forward and right vectors
+		FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+		// Special handling for climbing
 		if (MovementComponent->IsClimbing())
 		{
 			ForwardDirection = FVector::CrossProduct(MovementComponent->GetClimbSurfaceNormal(), -GetActorRightVector());
-		}
-		else
-		{
-			//ForwardDirection = GetControlOrientationMatrix().GetUnitAxis(EAxis::X);
-			ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-		}
-
-		// get right vector 
-		//const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-		FVector RightDirection;
-
-		if (MovementComponent->IsClimbing())
-		{
 			RightDirection = FVector::CrossProduct(MovementComponent->GetClimbSurfaceNormal(), GetActorUpVector());
 		}
-		else
-		{
-			//RightDirection = GetControlOrientationMatrix().GetUnitAxis(EAxis::Y);
-			RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-		}
 
-		// add movement 
+		// Add movement input
 		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
 	}
@@ -377,6 +371,9 @@ void ABotwCharacter::OnLeftMousePressed()
         FInputModeGameOnly InputMode; // Game-only mode to capture the mouse
         PlayerController->SetInputMode(InputMode);
     }
+
+    // Disable movement-based rotation while the left mouse button is pressed
+    GetCharacterMovement()->bOrientRotationToMovement = false;
 }
 
 void ABotwCharacter::OnLeftMouseReleased()
@@ -393,8 +390,10 @@ void ABotwCharacter::OnLeftMouseReleased()
         InputMode.SetHideCursorDuringCapture(false);
         PlayerController->SetInputMode(InputMode);
     }
-}
 
+    // Re-enable movement-based rotation when the left mouse button is released
+    GetCharacterMovement()->bOrientRotationToMovement = true;
+}
 
 void ABotwCharacter::OnRightMousePressed()
 {
