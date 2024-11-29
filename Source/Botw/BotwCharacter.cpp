@@ -327,6 +327,8 @@ void ABotwCharacter::Look(const FInputActionValue& Value)
             // Rotate the camera freely around the character
             AddControllerYawInput(LookAxisVector.X);
             AddControllerPitchInput(LookAxisVector.Y);
+
+           UE_LOG(LogTemp, Warning,  TEXT("Look LookAxisVector.Y: %f"), LookAxisVector.Y);
         }
         else if (bIsRightMouseButtonDown)
         {
@@ -338,8 +340,12 @@ void ABotwCharacter::Look(const FInputActionValue& Value)
             // Adjust the controller's rotation to update the camera independently
             FRotator ControllerRotation = Controller->GetControlRotation();
             ControllerRotation.Yaw += LookAxisVector.X; // Camera yaw follows the mouse
-            ControllerRotation.Pitch = FMath::Clamp(ControllerRotation.Pitch - LookAxisVector.Y, -80.0f, 80.0f); // Clamp pitch
+            //ControllerRotation.Pitch = FMath::Clamp(ControllerRotation.Pitch - LookAxisVector.Y, -80.0f, 80.0f); // Clamp pitch
+            ControllerRotation.Pitch -= LookAxisVector.Y;
             Controller->SetControlRotation(ControllerRotation);
+
+            UE_LOG(LogTemp, Warning,  TEXT("Look ControllerRotation: %f"), LookAxisVector.Y);
+            UE_LOG(LogTemp, Warning,  TEXT("Look ControllerRotation: %f"), ControllerRotation.Pitch);
         }
     }
 }
@@ -393,10 +399,14 @@ void ABotwCharacter::OnLeftMouseReleased()
 
     // Re-enable movement-based rotation when the left mouse button is released
     GetCharacterMovement()->bOrientRotationToMovement = true;
+
+    UE_LOG(LogTemp, Warning,  TEXT("OnLeftMouseReleased"));
 }
 
 void ABotwCharacter::OnRightMousePressed()
 {
+    UE_LOG(LogTemp, Warning,  TEXT("OnRightMousePressed"));
+
     bIsRightMouseButtonDown = true;
 
     if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
