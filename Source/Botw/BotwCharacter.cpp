@@ -180,23 +180,33 @@ void ABotwCharacter::CheckOverlapDuringPunch()
 
 void ABotwCharacter::BeginPlay()
 {
-	// Call the base class  
-	Super::BeginPlay();
+    Super::BeginPlay();
 
-	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("BEGIN PLAY"));
+    GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("BEGIN PLAY"));
 
-	//Add Input Mapping Context
-	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			Subsystem->AddMappingContext(DefaultMappingContext, 0);
-		}
-	}
+    // Add Input Mapping Context
+    if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+    {
+        if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+        {
+            Subsystem->AddMappingContext(DefaultMappingContext, 0);
+        }
 
-	FistCollision = Cast<USphereComponent>(FindComponentByClass<USphereComponent>());
+        // Make the mouse cursor visible
+        PlayerController->bShowMouseCursor = true;
+        PlayerController->bEnableClickEvents = true;
+        PlayerController->bEnableMouseOverEvents = true;
 
-	 // Initialize the AnimInstance
+        // Lock the mouse to the viewport
+        FInputModeGameAndUI InputMode;
+        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+        InputMode.SetHideCursorDuringCapture(false); // Ensure cursor stays visible
+        PlayerController->SetInputMode(InputMode);
+    }
+
+    FistCollision = Cast<USphereComponent>(FindComponentByClass<USphereComponent>());
+
+    // Initialize the AnimInstance
     if (GetMesh())
     {
         AnimInstance = GetMesh()->GetAnimInstance();
@@ -206,6 +216,7 @@ void ABotwCharacter::BeginPlay()
         }
     }
 }
+
 
 void ABotwCharacter::OnBoxHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
@@ -239,6 +250,12 @@ void ABotwCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent->BindAction("Climb", IE_Pressed, this, &ABotwCharacter::Climb);
 	PlayerInputComponent->BindAction("Cancel Climb", IE_Pressed, this, &ABotwCharacter::CancelClimb);
 	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &ABotwCharacter::Attack);
+
+	PlayerInputComponent->BindAction("LeftMouseButton", IE_Pressed, this, &ABotwCharacter::OnLeftMousePressed);
+	PlayerInputComponent->BindAction("LeftMouseButton", IE_Released, this, &ABotwCharacter::OnLeftMouseReleased);
+	PlayerInputComponent->BindAction("RightMouseButton", IE_Pressed, this, &ABotwCharacter::OnRightMousePressed);
+	PlayerInputComponent->BindAction("RightMouseButton", IE_Released, this, &ABotwCharacter::OnRightMouseReleased);
+
 }
 
 void ABotwCharacter::Move(const FInputActionValue& Value)
@@ -291,16 +308,96 @@ void ABotwCharacter::Move(const FInputActionValue& Value)
 
 void ABotwCharacter::Look(const FInputActionValue& Value)
 {
-	// input is a Vector2D
-	FVector2D LookAxisVector = Value.Get<FVector2D>();
+    FVector2D LookAxisVector = Value.Get<FVector2D>();
 
-	if (Controller != nullptr)
-	{
-		// add yaw and pitch input to controller
-		AddControllerYawInput(LookAxisVector.X);
-		AddControllerPitchInput(LookAxisVector.Y);
-	}
+    if (Controller != nullptr)
+    {
+        if (bIsLeftMouseButtonDown)
+        {
+            // Rotate the camera freely around the character
+            AddControllerYawInput(LookAxisVector.X);
+            AddControllerPitchInput(LookAxisVector.Y);
+        }
+        else if (bIsRightMouseButtonDown)
+        {
+            // Rotate the character on X-axis (yaw)
+            FRotator NewCharacterRotation = GetActorRotation();
+            NewCharacterRotation.Yaw += LookAxisVector.X;
+            SetActorRotation(NewCharacterRotation);
+
+            // Adjust the controller's rotation to update the camera independently
+            FRotator ControllerRotation = Controller->GetControlRotation();
+            ControllerRotation.Yaw += LookAxisVector.X; // Camera yaw follows the mouse
+            ControllerRotation.Pitch = FMath::Clamp(ControllerRotation.Pitch - LookAxisVector.Y, -80.0f, 80.0f); // Clamp pitch
+            Controller->SetControlRotation(ControllerRotation);
+        }
+    }
 }
+
+// LOOK FUNCTIONS
+
+void ABotwCharacter::OnLeftMousePressed()
+{
+    bIsLeftMouseButtonDown = true;
+
+    if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+    {
+        // Hide the cursor and lock it for seamless camera rotation
+        PlayerController->bShowMouseCursor = false;
+
+        FInputModeGameOnly InputMode; // Game-only mode to capture the mouse
+        PlayerController->SetInputMode(InputMode);
+    }
+}
+
+void ABotwCharacter::OnLeftMouseReleased()
+{
+    bIsLeftMouseButtonDown = false;
+
+    if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+    {
+        // Restore the cursor and unlock it
+        PlayerController->bShowMouseCursor = true;
+
+        FInputModeGameAndUI InputMode; // Restore the previous mode
+        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+        InputMode.SetHideCursorDuringCapture(false);
+        PlayerController->SetInputMode(InputMode);
+    }
+}
+
+
+void ABotwCharacter::OnRightMousePressed()
+{
+    bIsRightMouseButtonDown = true;
+
+    if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+    {
+        // Hide the cursor and lock it for seamless rotation
+        PlayerController->bShowMouseCursor = false;
+
+        FInputModeGameOnly InputMode; // Game-only mode to capture the mouse
+        PlayerController->SetInputMode(InputMode);
+    }
+}
+
+void ABotwCharacter::OnRightMouseReleased()
+{
+    bIsRightMouseButtonDown = false;
+
+    if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+    {
+        // Restore the cursor and unlock it
+        PlayerController->bShowMouseCursor = true;
+
+        FInputModeGameAndUI InputMode; // Restore the previous mode
+        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+        InputMode.SetHideCursorDuringCapture(false);
+        PlayerController->SetInputMode(InputMode);
+    }
+}
+
+// LOOK FUNCTIONS END
 
 void ABotwCharacter::Climb()
 {

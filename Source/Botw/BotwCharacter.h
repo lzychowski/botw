@@ -93,7 +93,16 @@ private:
 	UPROPERTY()
 	UAnimInstance* AnimInstance;
 
+	bool bIsLeftMouseButtonDown = false;
+    bool bIsRightMouseButtonDown = false;
+
 protected:
+
+    // New methods for mouse input handling
+    void OnLeftMousePressed();
+    void OnLeftMouseReleased();
+    void OnRightMousePressed();
+    void OnRightMouseReleased();
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
