@@ -284,6 +284,9 @@ void ABotwCharacter::Move(const FInputActionValue& Value)
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
+    // UE_LOG(LogTemp, Warning,  TEXT("Move MovementVector.Y %f"), MovementVector.Y);
+    // UE_LOG(LogTemp, Warning,  TEXT("Move MovementVector.X %f"), MovementVector.X);
+
 	if (Controller != nullptr)
 	{
 		// Determine movement direction
@@ -312,6 +315,13 @@ void ABotwCharacter::Move(const FInputActionValue& Value)
 			RightDirection = FVector::CrossProduct(MovementComponent->GetClimbSurfaceNormal(), GetActorUpVector());
 		}
 
+        // UE_LOG(LogTemp, Warning,  TEXT("Move ForwardDirection.Y %f"), ForwardDirection.Y);
+        // UE_LOG(LogTemp, Warning,  TEXT("Move ForwardDirection.X %f"), ForwardDirection.X);
+        // UE_LOG(LogTemp, Warning,  TEXT("Move ForwardDirection.Z %f"), ForwardDirection.Z);
+        // UE_LOG(LogTemp, Warning,  TEXT("Move RightDirection.Y %f"), RightDirection.Y);
+        // UE_LOG(LogTemp, Warning,  TEXT("Move RightDirection.X %f"), RightDirection.X);
+        // UE_LOG(LogTemp, Warning,  TEXT("Move RightDirection.Z %f"), RightDirection.Z);
+
 		// Add movement input
 		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
@@ -328,6 +338,9 @@ void ABotwCharacter::MouseMove(const FInputActionValue& Value)
 	if (Character->IsPunching()) return;
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
+
+    // UE_LOG(LogTemp, Warning,  TEXT("MouseMove MovementVector.Y %f"), MovementVector.Y);
+    // UE_LOG(LogTemp, Warning,  TEXT("MouseMove MovementVector.X %f"), MovementVector.X);
 
 	if (Controller != nullptr)
 	{
@@ -349,15 +362,25 @@ void ABotwCharacter::MouseMove(const FInputActionValue& Value)
 			RightDirection = FVector::CrossProduct(MovementComponent->GetClimbSurfaceNormal(), GetActorUpVector());
 		}
 
+        // UE_LOG(LogTemp, Warning,  TEXT("MouseMove ForwardDirection.Y %f"), ForwardDirection.Y);
+        // UE_LOG(LogTemp, Warning,  TEXT("MouseMove ForwardDirection.X %f"), ForwardDirection.X);
+        // UE_LOG(LogTemp, Warning,  TEXT("MouseMove ForwardDirection.Z %f"), ForwardDirection.Z);
+        // UE_LOG(LogTemp, Warning,  TEXT("MouseMove RightDirection.Y %f"), RightDirection.Y);
+        // UE_LOG(LogTemp, Warning,  TEXT("MouseMove RightDirection.X %f"), RightDirection.X);
+        // UE_LOG(LogTemp, Warning,  TEXT("MouseMove RightDirection.Z %f"), RightDirection.Z);
+
 		// Add movement input
-		AddMovementInput(ForwardDirection, MovementVector.Y);
-		AddMovementInput(RightDirection, MovementVector.X);
+		AddMovementInput(ForwardDirection, 1.0);
+		AddMovementInput(RightDirection, 0.0);
 	}
 }
 
 void ABotwCharacter::Look(const FInputActionValue& Value)
 {
     FVector2D LookAxisVector = Value.Get<FVector2D>();
+
+    UE_LOG(LogTemp, Warning,  TEXT("bIsLeftMouseButtonDown: %s"), bIsLeftMouseButtonDown ? TEXT("true") : TEXT("false"));
+    UE_LOG(LogTemp, Warning,  TEXT("bIsRightMouseButtonDown: %s"), bIsRightMouseButtonDown ? TEXT("true") : TEXT("false"));
 
     if (Controller != nullptr)
     {
@@ -457,8 +480,6 @@ void ABotwCharacter::OnRightMousePressed()
     UE_LOG(LogTemp, Warning,  TEXT("OnRightMousePressed"));
 
     bIsRightMouseButtonDown = true;
-
-    //if (bIsLeftMouseButtonDown && bIsRightMouseButtonDown) return;
 
     if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
     {
