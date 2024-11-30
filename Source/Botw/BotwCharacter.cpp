@@ -332,6 +332,9 @@ void ABotwCharacter::MouseMove(const FInputActionValue& Value)
 {
     UE_LOG(LogTemp, Warning,  TEXT("MouseMoveAction"));
 
+    if (!bIsLeftMouseButtonDown || !bIsRightMouseButtonDown) return;
+
+    GetCharacterMovement()->bOrientRotationToMovement = true;
 
 	ABotwCharacter* Character = Cast<ABotwCharacter>(MovementComponent->GetOwner());
 
@@ -377,6 +380,8 @@ void ABotwCharacter::MouseMove(const FInputActionValue& Value)
 
 void ABotwCharacter::Look(const FInputActionValue& Value)
 {
+    UE_LOG(LogTemp, Warning,  TEXT("Look"));
+
     FVector2D LookAxisVector = Value.Get<FVector2D>();
 
     UE_LOG(LogTemp, Warning,  TEXT("bIsLeftMouseButtonDown: %s"), bIsLeftMouseButtonDown ? TEXT("true") : TEXT("false"));
@@ -437,8 +442,6 @@ void ABotwCharacter::OnLeftMousePressed()
 
     bIsLeftMouseButtonDown = true;
 
-    if (bIsLeftMouseButtonDown && bIsRightMouseButtonDown) return;
-
     UE_LOG(LogTemp, Warning,  TEXT("OnLeftMousePressed past 2 button check"));
 
     if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
@@ -450,8 +453,11 @@ void ABotwCharacter::OnLeftMousePressed()
         PlayerController->SetInputMode(InputMode);
     }
 
-    // Disable movement-based rotation while the left mouse button is pressed
-    GetCharacterMovement()->bOrientRotationToMovement = false;
+    // Disable movement-based rotation while LMB is pressed
+    if (!bIsRightMouseButtonDown) // Only disable if RMB is not pressed
+    {
+        GetCharacterMovement()->bOrientRotationToMovement = false;
+    }
 }
 
 void ABotwCharacter::OnLeftMouseReleased()
@@ -471,8 +477,11 @@ void ABotwCharacter::OnLeftMouseReleased()
         PlayerController->SetInputMode(InputMode);
     }
 
-    // Re-enable movement-based rotation when the left mouse button is released
-    GetCharacterMovement()->bOrientRotationToMovement = true;
+    // Re-enable movement-based rotation only if RMB is not pressed
+    if (!bIsRightMouseButtonDown)
+    {
+        GetCharacterMovement()->bOrientRotationToMovement = true;
+    }
 }
 
 void ABotwCharacter::OnRightMousePressed()
@@ -488,12 +497,12 @@ void ABotwCharacter::OnRightMousePressed()
 
         FInputModeGameOnly InputMode; // Game-only mode to capture the mouse
         PlayerController->SetInputMode(InputMode);
-
-        FRotator CameraRotation = Controller->GetControlRotation();
-        FRotator NewCharacterRotation = GetActorRotation();
-        NewCharacterRotation.Yaw = CameraRotation.Yaw;
-        SetActorRotation(NewCharacterRotation);
     }
+
+    FRotator CameraRotation = Controller->GetControlRotation();
+    FRotator NewCharacterRotation = GetActorRotation();
+    NewCharacterRotation.Yaw = CameraRotation.Yaw;
+    SetActorRotation(NewCharacterRotation);
 }
 
 void ABotwCharacter::OnRightMouseReleased()
@@ -511,6 +520,12 @@ void ABotwCharacter::OnRightMouseReleased()
         InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
         InputMode.SetHideCursorDuringCapture(false);
         PlayerController->SetInputMode(InputMode);
+    }
+
+    // Re-enable movement-based rotation only if LMB is not pressed
+    if (!bIsLeftMouseButtonDown)
+    {
+        GetCharacterMovement()->bOrientRotationToMovement = true;
     }
 }
 
