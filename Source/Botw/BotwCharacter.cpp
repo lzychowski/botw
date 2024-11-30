@@ -252,11 +252,19 @@ void ABotwCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ABotwCharacter::Move);
 
+        // Mouse Moving
+		EnhancedInputComponent->BindAction(MouseMoveAction, ETriggerEvent::Triggered, this, &ABotwCharacter::MouseMove);
+
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ABotwCharacter::Look);
 
         // Bind the zoom action
         EnhancedInputComponent->BindAction(ZoomAction, ETriggerEvent::Triggered, this, &ABotwCharacter::ZoomCamera);
+
+        EnhancedInputComponent->BindAction(LeftMouse, ETriggerEvent::Started, this, &ABotwCharacter::OnLeftMousePressed);
+        EnhancedInputComponent->BindAction(LeftMouse, ETriggerEvent::Completed, this, &ABotwCharacter::OnLeftMouseReleased);
+        EnhancedInputComponent->BindAction(RightMouse, ETriggerEvent::Started, this, &ABotwCharacter::OnRightMousePressed);
+        EnhancedInputComponent->BindAction(RightMouse, ETriggerEvent::Completed, this, &ABotwCharacter::OnRightMouseReleased);
 	}
 	else
 	{
@@ -266,12 +274,6 @@ void ABotwCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent->BindAction("Climb", IE_Pressed, this, &ABotwCharacter::Climb);
 	PlayerInputComponent->BindAction("Cancel Climb", IE_Pressed, this, &ABotwCharacter::CancelClimb);
 	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &ABotwCharacter::Attack);
-
-	PlayerInputComponent->BindAction("LeftMouseButton", IE_Pressed, this, &ABotwCharacter::OnLeftMousePressed);
-	PlayerInputComponent->BindAction("LeftMouseButton", IE_Released, this, &ABotwCharacter::OnLeftMouseReleased);
-	PlayerInputComponent->BindAction("RightMouseButton", IE_Pressed, this, &ABotwCharacter::OnRightMousePressed);
-	PlayerInputComponent->BindAction("RightMouseButton", IE_Released, this, &ABotwCharacter::OnRightMouseReleased);
-
 }
 
 void ABotwCharacter::Move(const FInputActionValue& Value)
@@ -316,22 +318,63 @@ void ABotwCharacter::Move(const FInputActionValue& Value)
 	}
 }
 
+void ABotwCharacter::MouseMove(const FInputActionValue& Value)
+{
+    UE_LOG(LogTemp, Warning,  TEXT("MouseMoveAction"));
+
+
+	ABotwCharacter* Character = Cast<ABotwCharacter>(MovementComponent->GetOwner());
+
+	if (Character->IsPunching()) return;
+	// input is a Vector2D
+	FVector2D MovementVector = Value.Get<FVector2D>();
+
+	if (Controller != nullptr)
+	{
+		// Determine movement direction
+		FRotator YawRotation;
+
+        // Use the controller's rotation otherwise
+        const FRotator Rotation = Controller->GetControlRotation();
+        YawRotation = FRotator(0, Rotation.Yaw, 0);
+
+		// Get forward and right vectors
+		FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+		// Special handling for climbing
+		if (MovementComponent->IsClimbing())
+		{
+			ForwardDirection = FVector::CrossProduct(MovementComponent->GetClimbSurfaceNormal(), -GetActorRightVector());
+			RightDirection = FVector::CrossProduct(MovementComponent->GetClimbSurfaceNormal(), GetActorUpVector());
+		}
+
+		// Add movement input
+		AddMovementInput(ForwardDirection, MovementVector.Y);
+		AddMovementInput(RightDirection, MovementVector.X);
+	}
+}
+
 void ABotwCharacter::Look(const FInputActionValue& Value)
 {
     FVector2D LookAxisVector = Value.Get<FVector2D>();
 
     if (Controller != nullptr)
     {
-        if (bIsLeftMouseButtonDown)
+        if (bIsLeftMouseButtonDown && !bIsRightMouseButtonDown)
         {
+            UE_LOG(LogTemp, Warning,  TEXT("Left but no right"));
+
             // Rotate the camera freely around the character
             AddControllerYawInput(LookAxisVector.X);
             AddControllerPitchInput(LookAxisVector.Y);
 
            UE_LOG(LogTemp, Warning,  TEXT("Look LookAxisVector.Y: %f"), LookAxisVector.Y);
         }
-        else if (bIsRightMouseButtonDown)
+        else if (bIsRightMouseButtonDown || (bIsLeftMouseButtonDown && bIsRightMouseButtonDown))
         {
+            UE_LOG(LogTemp, Warning,  TEXT("Left and right OR right"));
+
             // Rotate the character on X-axis (yaw)
             FRotator NewCharacterRotation = GetActorRotation();
             NewCharacterRotation.Yaw += LookAxisVector.X;
@@ -367,7 +410,13 @@ void ABotwCharacter::ZoomCamera(const FInputActionValue& Value)
 
 void ABotwCharacter::OnLeftMousePressed()
 {
+    UE_LOG(LogTemp, Warning,  TEXT("OnLeftMousePressed"));
+
     bIsLeftMouseButtonDown = true;
+
+    if (bIsLeftMouseButtonDown && bIsRightMouseButtonDown) return;
+
+    UE_LOG(LogTemp, Warning,  TEXT("OnLeftMousePressed past 2 button check"));
 
     if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
     {
@@ -384,6 +433,8 @@ void ABotwCharacter::OnLeftMousePressed()
 
 void ABotwCharacter::OnLeftMouseReleased()
 {
+    UE_LOG(LogTemp, Warning,  TEXT("OnLeftMouseReleased"));
+
     bIsLeftMouseButtonDown = false;
 
     if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
@@ -399,8 +450,6 @@ void ABotwCharacter::OnLeftMouseReleased()
 
     // Re-enable movement-based rotation when the left mouse button is released
     GetCharacterMovement()->bOrientRotationToMovement = true;
-
-    UE_LOG(LogTemp, Warning,  TEXT("OnLeftMouseReleased"));
 }
 
 void ABotwCharacter::OnRightMousePressed()
@@ -409,6 +458,8 @@ void ABotwCharacter::OnRightMousePressed()
 
     bIsRightMouseButtonDown = true;
 
+    //if (bIsLeftMouseButtonDown && bIsRightMouseButtonDown) return;
+
     if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
     {
         // Hide the cursor and lock it for seamless rotation
@@ -416,11 +467,18 @@ void ABotwCharacter::OnRightMousePressed()
 
         FInputModeGameOnly InputMode; // Game-only mode to capture the mouse
         PlayerController->SetInputMode(InputMode);
+
+        FRotator CameraRotation = Controller->GetControlRotation();
+        FRotator NewCharacterRotation = GetActorRotation();
+        NewCharacterRotation.Yaw = CameraRotation.Yaw;
+        SetActorRotation(NewCharacterRotation);
     }
 }
 
 void ABotwCharacter::OnRightMouseReleased()
 {
+    UE_LOG(LogTemp, Warning,  TEXT("OnRightMouseReleased"));
+
     bIsRightMouseButtonDown = false;
 
     if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
