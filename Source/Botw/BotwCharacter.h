@@ -61,6 +61,10 @@ class ABotwCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* RightMouse;
 
+	/** Mouse Move Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* MiddleMouse;
+
 	/** Look Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
@@ -109,6 +113,9 @@ private:
 
 	bool bIsLeftMouseButtonDown = false;
     bool bIsRightMouseButtonDown = false;
+	bool bIsMiddleMouseButtonDown = false;
+
+	FVector2D OriginalCursorPosition;
 
 protected:
 
@@ -117,6 +124,8 @@ protected:
     void OnLeftMouseReleased();
     void OnRightMousePressed();
     void OnRightMouseReleased();
+    void OnMiddleMousePressed();
+    void OnMiddleMouseReleased();
 
 	// InputAction for zooming
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
@@ -127,13 +136,13 @@ protected:
 
 	// Zoom limits
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
-    float MinZoomDistance = 150.0f; // Minimum camera distance
+    float MinZoomDistance = 250.0f; // Minimum camera distance
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
     float MaxZoomDistance = 800.0f; // Maximum camera distance
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
-	float ZoomSpeed = 300.0f; // Adjust this value to control zoom speed
+	float ZoomSpeed = 800.0f; // Adjust this value to control zoom speed
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);

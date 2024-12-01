@@ -185,8 +185,8 @@ void ABotwCharacter::BeginPlay()
     GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("BEGIN PLAY"));
 
     // Example: Load your SoundWave asset
-    USoundWave* BackgroundSound = LoadObject<USoundWave>(nullptr, TEXT("/Game/Audio/Diablo_Dark_Ambient_Music_for_Deep_Relaxation_and_Meditation.Diablo_Dark_Ambient_Music_for_Deep_Relaxation_and_Meditation")
-);
+    USoundWave* BackgroundSound = LoadObject<USoundWave>(nullptr, TEXT("/Game/Audio/Diablo_Dark_Ambient_Music_for_Deep_Relaxation_and_Meditation.Diablo_Dark_Ambient_Music_for_Deep_Relaxation_and_Meditation"));
+
     if (BackgroundSound)
     {
         // Play the sound in 2D
@@ -243,7 +243,8 @@ void ABotwCharacter::OnBoxHit(UPrimitiveComponent* HitComponent, AActor* OtherAc
 void ABotwCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	// Set up action bindings
-	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+    {
 		
 		// Jumping
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ABotwCharacter::Jump);
@@ -254,6 +255,10 @@ void ABotwCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
         // Mouse Moving
 		EnhancedInputComponent->BindAction(MouseMoveAction, ETriggerEvent::Triggered, this, &ABotwCharacter::MouseMove);
+
+        // Middle Mouse
+        EnhancedInputComponent->BindAction(MiddleMouse, ETriggerEvent::Started, this, &ABotwCharacter::OnMiddleMousePressed);
+        EnhancedInputComponent->BindAction(MiddleMouse, ETriggerEvent::Completed, this, &ABotwCharacter::OnMiddleMouseReleased);
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ABotwCharacter::Look);
@@ -284,9 +289,6 @@ void ABotwCharacter::Move(const FInputActionValue& Value)
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
-    // UE_LOG(LogTemp, Warning,  TEXT("Move MovementVector.Y %f"), MovementVector.Y);
-    // UE_LOG(LogTemp, Warning,  TEXT("Move MovementVector.X %f"), MovementVector.X);
-
 	if (Controller != nullptr)
 	{
 		// Determine movement direction
@@ -315,13 +317,6 @@ void ABotwCharacter::Move(const FInputActionValue& Value)
 			RightDirection = FVector::CrossProduct(MovementComponent->GetClimbSurfaceNormal(), GetActorUpVector());
 		}
 
-        // UE_LOG(LogTemp, Warning,  TEXT("Move ForwardDirection.Y %f"), ForwardDirection.Y);
-        // UE_LOG(LogTemp, Warning,  TEXT("Move ForwardDirection.X %f"), ForwardDirection.X);
-        // UE_LOG(LogTemp, Warning,  TEXT("Move ForwardDirection.Z %f"), ForwardDirection.Z);
-        // UE_LOG(LogTemp, Warning,  TEXT("Move RightDirection.Y %f"), RightDirection.Y);
-        // UE_LOG(LogTemp, Warning,  TEXT("Move RightDirection.X %f"), RightDirection.X);
-        // UE_LOG(LogTemp, Warning,  TEXT("Move RightDirection.Z %f"), RightDirection.Z);
-
 		// Add movement input
 		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
@@ -332,7 +327,12 @@ void ABotwCharacter::MouseMove(const FInputActionValue& Value)
 {
     UE_LOG(LogTemp, Warning,  TEXT("MouseMoveAction"));
 
-    if (!bIsLeftMouseButtonDown || !bIsRightMouseButtonDown) return;
+    UE_LOG(LogTemp, Warning, TEXT("Left: %s, Right: %s, Middle: %s"),
+       bIsLeftMouseButtonDown ? TEXT("Pressed") : TEXT("Not Pressed"),
+       bIsRightMouseButtonDown ? TEXT("Pressed") : TEXT("Not Pressed"),
+       bIsMiddleMouseButtonDown ? TEXT("Pressed") : TEXT("Not Pressed"));
+
+    if (!(bIsLeftMouseButtonDown && bIsRightMouseButtonDown)) return;
 
     GetCharacterMovement()->bOrientRotationToMovement = true;
 
@@ -341,9 +341,6 @@ void ABotwCharacter::MouseMove(const FInputActionValue& Value)
 	if (Character->IsPunching()) return;
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
-
-    // UE_LOG(LogTemp, Warning,  TEXT("MouseMove MovementVector.Y %f"), MovementVector.Y);
-    // UE_LOG(LogTemp, Warning,  TEXT("MouseMove MovementVector.X %f"), MovementVector.X);
 
 	if (Controller != nullptr)
 	{
@@ -364,13 +361,6 @@ void ABotwCharacter::MouseMove(const FInputActionValue& Value)
 			ForwardDirection = FVector::CrossProduct(MovementComponent->GetClimbSurfaceNormal(), -GetActorRightVector());
 			RightDirection = FVector::CrossProduct(MovementComponent->GetClimbSurfaceNormal(), GetActorUpVector());
 		}
-
-        // UE_LOG(LogTemp, Warning,  TEXT("MouseMove ForwardDirection.Y %f"), ForwardDirection.Y);
-        // UE_LOG(LogTemp, Warning,  TEXT("MouseMove ForwardDirection.X %f"), ForwardDirection.X);
-        // UE_LOG(LogTemp, Warning,  TEXT("MouseMove ForwardDirection.Z %f"), ForwardDirection.Z);
-        // UE_LOG(LogTemp, Warning,  TEXT("MouseMove RightDirection.Y %f"), RightDirection.Y);
-        // UE_LOG(LogTemp, Warning,  TEXT("MouseMove RightDirection.X %f"), RightDirection.X);
-        // UE_LOG(LogTemp, Warning,  TEXT("MouseMove RightDirection.Z %f"), RightDirection.Z);
 
 		// Add movement input
 		AddMovementInput(ForwardDirection, 1.0);
@@ -399,7 +389,7 @@ void ABotwCharacter::Look(const FInputActionValue& Value)
 
            UE_LOG(LogTemp, Warning,  TEXT("Look LookAxisVector.Y: %f"), LookAxisVector.Y);
         }
-        else if (bIsRightMouseButtonDown || (bIsLeftMouseButtonDown && bIsRightMouseButtonDown))
+        else if (bIsMiddleMouseButtonDown || bIsRightMouseButtonDown || (bIsLeftMouseButtonDown && bIsRightMouseButtonDown))
         {
             UE_LOG(LogTemp, Warning,  TEXT("Left and right OR right"));
 
@@ -446,6 +436,9 @@ void ABotwCharacter::OnLeftMousePressed()
 
     if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
     {
+        // Save the original cursor position
+        PlayerController->GetMousePosition(OriginalCursorPosition.X, OriginalCursorPosition.Y);
+        
         // Hide the cursor and lock it for seamless camera rotation
         PlayerController->bShowMouseCursor = false;
 
@@ -468,13 +461,20 @@ void ABotwCharacter::OnLeftMouseReleased()
 
     if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
     {
-        // Restore the cursor and unlock it
-        PlayerController->bShowMouseCursor = true;
+        
+        if (!bIsRightMouseButtonDown) {
+            // Restore the cursor position
+            PlayerController->SetMouseLocation(OriginalCursorPosition.X, OriginalCursorPosition.Y);
+            // Restore the cursor and unlock it
+            PlayerController->bShowMouseCursor = true;
+            
+            FInputModeGameAndUI InputMode; // Restore the previous mode
+            InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+            InputMode.SetHideCursorDuringCapture(false);
+            PlayerController->SetInputMode(InputMode);
+        }
 
-        FInputModeGameAndUI InputMode; // Restore the previous mode
-        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
-        InputMode.SetHideCursorDuringCapture(false);
-        PlayerController->SetInputMode(InputMode);
+
     }
 
     // Re-enable movement-based rotation only if RMB is not pressed
@@ -492,6 +492,9 @@ void ABotwCharacter::OnRightMousePressed()
 
     if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
     {
+        // Save the original cursor position
+        PlayerController->GetMousePosition(OriginalCursorPosition.X, OriginalCursorPosition.Y);
+
         // Hide the cursor and lock it for seamless rotation
         PlayerController->bShowMouseCursor = false;
 
@@ -514,12 +517,17 @@ void ABotwCharacter::OnRightMouseReleased()
     if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
     {
         // Restore the cursor and unlock it
-        PlayerController->bShowMouseCursor = true;
+        if (!bIsLeftMouseButtonDown) {
+            // Restore the cursor position
+            PlayerController->SetMouseLocation(OriginalCursorPosition.X, OriginalCursorPosition.Y);
+            // Restore the cursor and unlock it
+            PlayerController->bShowMouseCursor = true;
 
-        FInputModeGameAndUI InputMode; // Restore the previous mode
-        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
-        InputMode.SetHideCursorDuringCapture(false);
-        PlayerController->SetInputMode(InputMode);
+            FInputModeGameAndUI InputMode; // Restore the previous mode
+            InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+            InputMode.SetHideCursorDuringCapture(false);
+            PlayerController->SetInputMode(InputMode);
+        }
     }
 
     // Re-enable movement-based rotation only if LMB is not pressed
@@ -528,6 +536,58 @@ void ABotwCharacter::OnRightMouseReleased()
         GetCharacterMovement()->bOrientRotationToMovement = true;
     }
 }
+
+void ABotwCharacter::OnMiddleMousePressed()
+{
+    UE_LOG(LogTemp, Warning,  TEXT("OnMiddleMousePressed"));
+    bIsMiddleMouseButtonDown = true;
+
+    if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+    {
+        // Save the original cursor position
+        PlayerController->GetMousePosition(OriginalCursorPosition.X, OriginalCursorPosition.Y);
+
+        // Hide the cursor and lock it for seamless rotation
+        PlayerController->bShowMouseCursor = false;
+
+        FInputModeGameOnly InputMode; // Game-only mode to capture the mouse
+        PlayerController->SetInputMode(InputMode);
+    }
+
+    FRotator CameraRotation = Controller->GetControlRotation();
+    FRotator NewCharacterRotation = GetActorRotation();
+    NewCharacterRotation.Yaw = CameraRotation.Yaw;
+    SetActorRotation(NewCharacterRotation);
+}
+
+void ABotwCharacter::OnMiddleMouseReleased()
+{
+    UE_LOG(LogTemp, Warning,  TEXT("OnMiddleMouseReleased"));
+    bIsMiddleMouseButtonDown = false;
+
+    if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+    {
+        // Restore the cursor and unlock it
+        if (!(bIsLeftMouseButtonDown && bIsRightMouseButtonDown)) {
+            // Restore the cursor position
+            PlayerController->SetMouseLocation(OriginalCursorPosition.X, OriginalCursorPosition.Y);
+            // Restore the cursor and unlock it
+            PlayerController->bShowMouseCursor = true;
+
+            FInputModeGameAndUI InputMode; // Restore the previous mode
+            InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+            InputMode.SetHideCursorDuringCapture(false);
+            PlayerController->SetInputMode(InputMode);
+        }
+    }
+
+    // Re-enable movement-based rotation only if LMB is not pressed
+    if (!(bIsLeftMouseButtonDown && bIsRightMouseButtonDown))
+    {
+        GetCharacterMovement()->bOrientRotationToMovement = true;
+    }
+}
+
 
 // LOOK FUNCTIONS END
 
