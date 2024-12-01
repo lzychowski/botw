@@ -332,7 +332,9 @@ void ABotwCharacter::MouseMove(const FInputActionValue& Value)
        bIsRightMouseButtonDown ? TEXT("Pressed") : TEXT("Not Pressed"),
        bIsMiddleMouseButtonDown ? TEXT("Pressed") : TEXT("Not Pressed"));
 
-    if (!(bIsLeftMouseButtonDown && bIsRightMouseButtonDown)) return;
+    if (!(bIsLeftMouseButtonDown && bIsRightMouseButtonDown) && !bIsMiddleMouseButtonDown) return;
+
+    UE_LOG(LogTemp, Warning,  TEXT("MouseMoveAction PAST CHECK"));
 
     GetCharacterMovement()->bOrientRotationToMovement = true;
 
