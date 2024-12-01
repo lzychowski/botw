@@ -463,8 +463,7 @@ void ABotwCharacter::OnLeftMouseReleased()
 
     if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
     {
-        
-        if (!bIsRightMouseButtonDown) {
+        if (!bIsRightMouseButtonDown && !bIsMiddleMouseButtonDown) {
             // Restore the cursor position
             PlayerController->SetMouseLocation(OriginalCursorPosition.X, OriginalCursorPosition.Y);
             // Restore the cursor and unlock it
@@ -475,12 +474,10 @@ void ABotwCharacter::OnLeftMouseReleased()
             InputMode.SetHideCursorDuringCapture(false);
             PlayerController->SetInputMode(InputMode);
         }
-
-
     }
 
     // Re-enable movement-based rotation only if RMB is not pressed
-    if (!bIsRightMouseButtonDown)
+    if (!bIsRightMouseButtonDown && !bIsMiddleMouseButtonDown)
     {
         GetCharacterMovement()->bOrientRotationToMovement = true;
     }
@@ -519,7 +516,7 @@ void ABotwCharacter::OnRightMouseReleased()
     if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
     {
         // Restore the cursor and unlock it
-        if (!bIsLeftMouseButtonDown) {
+        if (!bIsLeftMouseButtonDown && !bIsMiddleMouseButtonDown) {
             // Restore the cursor position
             PlayerController->SetMouseLocation(OriginalCursorPosition.X, OriginalCursorPosition.Y);
             // Restore the cursor and unlock it
@@ -533,7 +530,7 @@ void ABotwCharacter::OnRightMouseReleased()
     }
 
     // Re-enable movement-based rotation only if LMB is not pressed
-    if (!bIsLeftMouseButtonDown)
+    if (!bIsLeftMouseButtonDown && !bIsMiddleMouseButtonDown)
     {
         GetCharacterMovement()->bOrientRotationToMovement = true;
     }
