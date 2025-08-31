@@ -283,6 +283,10 @@ void ABotwCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 void ABotwCharacter::Move(const FInputActionValue& Value)
 {
+    // don't move if mouseMove is active to prevent conflicts
+    // This prevents the Move function from interfering with MouseMove
+    if ((bIsLeftMouseButtonDown && bIsRightMouseButtonDown) || bIsMiddleMouseButtonDown) return;
+
 	ABotwCharacter* Character = Cast<ABotwCharacter>(MovementComponent->GetOwner());
 
 	if (Character->IsPunching()) return;
@@ -294,17 +298,10 @@ void ABotwCharacter::Move(const FInputActionValue& Value)
 		// Determine movement direction
 		FRotator YawRotation;
 
-		if (bIsLeftMouseButtonDown)
-		{
-			// Use the character's facing direction when left mouse button is pressed
-			YawRotation = FRotator(0, GetActorRotation().Yaw, 0);
-		}
-		else
-		{
-			// Use the controller's rotation otherwise
- 			const FRotator Rotation = Controller->GetControlRotation();
-			YawRotation = FRotator(0, Rotation.Yaw, 0);
-		}
+		// Use the controller's rotation for movement direction
+		// This ensures the character moves in the expected directions and rotates properly
+		const FRotator Rotation = Controller->GetControlRotation();
+		YawRotation = FRotator(0, Rotation.Yaw, 0);
 
 		// Get forward and right vectors
 		FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
@@ -332,10 +329,13 @@ void ABotwCharacter::MouseMove(const FInputActionValue& Value)
        bIsRightMouseButtonDown ? TEXT("Pressed") : TEXT("Not Pressed"),
        bIsMiddleMouseButtonDown ? TEXT("Pressed") : TEXT("Not Pressed"));
 
+    // Only handle movement when both left and right are pressed, or middle is pressed
     if (!(bIsLeftMouseButtonDown && bIsRightMouseButtonDown) && !bIsMiddleMouseButtonDown) return;
 
     UE_LOG(LogTemp, Warning,  TEXT("MouseMoveAction PAST CHECK"));
 
+    // Keep movement-based rotation enabled for middle and left+right
+    // This ensures the character moves in camera direction and rotates to face movement
     GetCharacterMovement()->bOrientRotationToMovement = true;
 
 	ABotwCharacter* Character = Cast<ABotwCharacter>(MovementComponent->GetOwner());
@@ -349,7 +349,7 @@ void ABotwCharacter::MouseMove(const FInputActionValue& Value)
 		// Determine movement direction
 		FRotator YawRotation;
 
-        // Use the controller's rotation otherwise
+        // Use the controller's rotation for consistent movement
         const FRotator Rotation = Controller->GetControlRotation();
         YawRotation = FRotator(0, Rotation.Yaw, 0);
 
@@ -364,9 +364,10 @@ void ABotwCharacter::MouseMove(const FInputActionValue& Value)
 			RightDirection = FVector::CrossProduct(MovementComponent->GetClimbSurfaceNormal(), GetActorUpVector());
 		}
 
-		// Add movement input
-		AddMovementInput(ForwardDirection, 1.0);
-		AddMovementInput(RightDirection, 0.0);
+		// Add movement input - swap X and Y to fix the 90-degree rotation issue
+		// This ensures the character moves in the correct camera-relative direction
+		AddMovementInput(ForwardDirection, MovementVector.X);
+		AddMovementInput(RightDirection, MovementVector.Y);
 	}
 }
 
@@ -448,11 +449,9 @@ void ABotwCharacter::OnLeftMousePressed()
         PlayerController->SetInputMode(InputMode);
     }
 
-    // Disable movement-based rotation while LMB is pressed
-    if (!bIsRightMouseButtonDown) // Only disable if RMB is not pressed
-    {
-        GetCharacterMovement()->bOrientRotationToMovement = false;
-    }
+    // Keep movement-based rotation enabled when LMB is pressed
+    // This allows the character to rotate to face movement direction when using WASD
+    GetCharacterMovement()->bOrientRotationToMovement = true;
 }
 
 void ABotwCharacter::OnLeftMouseReleased()
